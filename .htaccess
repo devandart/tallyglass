@@ -1,0 +1,6 @@
+# Revalidate scripts and styles on every load (they're small), so updates show up right away.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

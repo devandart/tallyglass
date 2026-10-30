@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tallyglass</title>
+<meta name="description" content="Private dashboard for your Claude Code sessions: sessions, tokens, API-equivalent cost and your 5-hour usage window. Runs entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Crect x='7' y='17' width='4' height='8' rx='1.5' fill='white'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='white'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1.5' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css?v=5">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<script type="module" src="js/app.js?v=5"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./" aria-label="Tallyglass home">
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--series-1)"/><rect x="7" y="17" width="4" height="8" rx="1.5" fill="#fff"/><rect x="14" y="11" width="4" height="14" rx="1.5" fill="#fff"/><rect x="21" y="7" width="4" height="18" rx="1.5" fill="#fff"/></svg>
+    <span>Tallyglass</span><small>for Claude Code</small>
+  </a>
+  <div class="controls" id="controls" hidden>
+    <div class="seg" id="range" role="group" aria-label="Date range">
+      <button data-v="7">7d</button><button data-v="30">30d</button><button data-v="90">90d</button><button data-v="0">All</button>
+    </div>
+    <div class="seg" id="metric" role="group" aria-label="Measure">
+      <button data-v="tok">Tokens</button><button data-v="cost">API cost</button>
+    </div>
+    <button class="btn" id="rescan" title="Re-read changed transcripts">Rescan</button>
+    <span class="demo-badge" id="demoBadge" hidden>Demo data</span>
+  </div>
+  <button class="icon-btn" id="theme" title="Toggle light/dark" aria-label="Toggle light/dark theme">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18V3z"/><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+  </button>
+</header>
+
+<main>
+  <!-- Landing -->
+  <section id="landing" class="landing">
+    <div class="hero">
+      <h1>See where your Claude Code tokens go</h1>
+      <p class="lede">Sessions, tokens, API-equivalent cost and your 5-hour usage window, read from the transcripts Claude Code already keeps on your computer.</p>
+      <p class="privacy"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10l-6 6z"/></svg>Runs entirely in your browser. No files are uploaded, no account, no tracking.</p>
+    </div>
+
+    <div class="drop" id="drop">
+      <div class="drop-inner">
+        <button class="play" id="pick" aria-describedby="pickSteps">
+          <span class="play-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>
+          <span class="play-txt"><b id="pickLabel">Scan my Claude Code history</b><small id="pickPath"></small></span>
+        </button>
+        <ol class="steps" id="pickSteps"></ol>
+        <p class="muted small">or drag the folder onto this box · <button class="link" id="pickOther">choose another folder</button></p>
+        <input type="file" id="dirInput" webkitdirectory multiple hidden>
+      </div>
+      <div class="paths">
+        <div class="path" data-os="win"><span class="os">Windows</span><code id="pWin">%USERPROFILE%\.claude\projects</code><button class="copy" data-copy="pWin" aria-label="Copy Windows path">Copy</button></div>
+        <div class="path" data-os="mac linux"><span class="os">macOS / Linux</span><code id="pMac">~/.claude/projects</code><button class="copy" data-copy="pMac" aria-label="Copy macOS and Linux path">Copy</button></div>
+      </div>
+      <details class="help">
+        <summary>Why do I have to pick the folder?</summary>
+        <ul>
+          <li>Browsers never let a web page open a folder on your computer by itself. You choose it once; Chrome and Edge then remember it, so later scans are one click.</li>
+          <li>Picking the whole <code>.claude</code> folder works too; only <code>projects</code> is read.</li>
+          <li>Some browsers say “upload” when you pick a folder. Nothing is sent anywhere: the files are read by this page, locally.</li>
+          <li id="hiddenTip" hidden></li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="landing-foot">
+      <button class="link" id="demo">Try it with demo data →</button>
+      <span class="muted" id="cachedNote" hidden></span>
+    </div>
+
+    <div class="features">
+      <div><b>Sessions</b><span>How many, how long, which projects, ranked by size.</span></div>
+      <div><b>This session vs. others</b><span>Rank, percentile and how many times the median it used.</span></div>
+      <div><b>5-hour window</b><span>When it resets, burn rate, and an estimate of what's left.</span></div>
+      <div><b>Cost &amp; caching</b><span>API-equivalent cost by model and what prompt caching saved.</span></div>
+    </div>
+  </section>
+
+  <!-- Progress -->
+  <section id="progress" class="progress" hidden>
+    <h2 id="progTitle">Reading transcripts…</h2>
+    <div class="bar"><div id="progBar"></div></div>
+    <p class="muted" id="progText"></p>
+    <p class="muted small">The first scan reads every transcript (large histories can take a few minutes). Later rescans only read files that changed.</p>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dash" class="dash" hidden>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid two">
+      <article class="card" id="limitsCard"></article>
+      <article class="card" id="compareCard"></article>
+    </div>
+
+    <article class="card">
+      <header class="card-h"><h3>Daily usage</h3><span class="sub" id="dailySub"></span></header>
+      <div class="legend" id="dailyLegend"></div>
+      <div class="chart h260"><canvas id="dailyChart"></canvas></div>
+    </article>
+
+    <div class="grid two">
+      <article class="card">
+        <header class="card-h"><h3>All sessions, ranked</h3><span class="sub">Log scale · click a bar to compare</span></header>
+        <div class="chart h220"><canvas id="rankChart"></canvas></div>
+      </article>
+      <article class="card">
+        <header class="card-h"><h3>Context size per turn</h3><span class="sub" id="ctxSub"></span></header>
+        <div class="chart h220"><canvas id="ctxChart"></canvas></div>
+      </article>
+    </div>
+
+    <div class="grid two">
+      <article class="card">
+        <header class="card-h"><h3>Recent 5-hour windows</h3><span class="sub" id="blocksSub"></span></header>
+        <div class="legend" id="blocksLegend"></div>
+        <div class="chart h220"><canvas id="blocksChart"></canvas></div>
+      </article>
+      <article class="card">
+        <header class="card-h"><h3>When you work</h3><span class="sub">Local time</span></header>
+        <div id="heat" class="heat"></div>
+        <div id="heatScale" class="heat-scale"></div>
+      </article>
+    </div>
+
+    <div class="grid three">
+      <article class="card"><header class="card-h"><h3>Projects</h3></header><div id="projects" class="bars"></div></article>
+      <article class="card"><header class="card-h"><h3>Models</h3></header><div id="models" class="bars"></div></article>
+      <article class="card"><header class="card-h"><h3>Token mix</h3></header><div id="mix"></div></article>
+    </div>
+
+    <div class="grid two">
+      <article class="card"><header class="card-h"><h3>Insights</h3></header><ul id="insights" class="insights"></ul></article>
+      <article class="card"><header class="card-h"><h3>Top tools</h3><span class="sub">Tool calls</span></header><div id="tools" class="bars"></div></article>
+    </div>
+
+    <article class="card">
+      <header class="card-h">
+        <h3>Sessions</h3>
+        <div class="table-tools">
+          <input type="search" id="search" placeholder="Search title, project, id…" aria-label="Search sessions">
+          <button class="btn" id="csv">Export CSV</button>
+        </div>
+      </header>
+      <div class="table-wrap"><table id="table"></table></div>
+      <div class="table-more"><button class="btn" id="more" hidden>Show more</button></div>
+    </article>
+
+    <footer class="foot">
+      <p>Token counts come from the <code>usage</code> field of each API response in your transcripts. Cost is the API list-price equivalent; subscriptions aren't billed per token. Limits are estimates; run <code>/usage</code> in Claude Code for official numbers.</p>
+      <p><button class="link" id="forget">Forget cached data</button> · <button class="link" id="change">Choose another folder</button></p>
+    </footer>
+  </section>
+</main>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+</body>
+</html>
