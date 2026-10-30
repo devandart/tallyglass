@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Turns per-file parse results into a dataset, and the dataset into dashboard numbers.
-import { modelInfo, recordCostParts, cacheSavings } from './pricing.js?v=5';
+import { modelInfo, recordCostParts, cacheSavings } from './pricing.js?v=6';
 
 const H = 3600e3;
 const DAY = 24 * H;

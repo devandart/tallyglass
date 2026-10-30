@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { buildDataset, analyze, BLOCK_MS } from './model.js?v=5';
-import { modelInfo } from './pricing.js?v=5';
-import { demoResults } from './demo.js?v=5';
-import * as src from './sources.js?v=5';
+import { buildDataset, analyze, BLOCK_MS } from './model.js?v=6';
+import { modelInfo } from './pricing.js?v=6';
+import { demoResults } from './demo.js?v=6';
+import * as src from './sources.js?v=6';
 
 const $ = (id) => document.getElementById(id);
 const H = 3600e3, DAY = 24 * H;
 
 // ---- Preferences ------------------------------------------------------------
 
-const PREFS_KEY = 'token-lens-prefs'; // name predates the rename, kept so saved budgets survive
+const PREFS_KEY = 'tallyglass-prefs';
 const prefs = Object.assign(
   { range: 30, metric: 'tok', theme: null, limits: { tok: { block: null, week: null }, cost: { block: null, week: null } }, weeklyReset: null },
   (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; } })(),

@@ -2,10 +2,9 @@
 // Getting transcript files into the page (folder picker, <input>, drag & drop),
 // parsing them with a worker pool, and caching results in IndexedDB so a rescan
 // only re-reads files that changed. Nothing leaves the browser.
-import { classifyPath } from './parse.js?v=5';
+import { classifyPath } from './parse.js?v=6';
 
-// Storage names predate the rename to Tallyglass; kept so existing caches and the remembered folder survive.
-const DB = 'token-lens';
+const DB = 'tallyglass';
 let dbp = null;
 
 function db() {
@@ -156,7 +155,7 @@ export async function scan(files, onProgress) {
   onProgress?.(state);
 
   const n = Math.max(2, Math.min(6, (navigator.hardwareConcurrency || 4) - 1));
-  const workers = Array.from({ length: Math.min(n, todo.length) }, () => new Worker(new URL('./scan.worker.js?v=5', import.meta.url), { type: 'module' }));
+  const workers = Array.from({ length: Math.min(n, todo.length) }, () => new Worker(new URL('./scan.worker.js?v=6', import.meta.url), { type: 'module' }));
   let next = 0;
   const partial = new Map();
 

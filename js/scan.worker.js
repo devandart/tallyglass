@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Parses transcript files off the main thread. One message in per file, one result out.
-import { createFileParser } from './parse.js?v=5';
+import { createFileParser } from './parse.js?v=6';
 
 const CHUNK = 4 << 20;
 
